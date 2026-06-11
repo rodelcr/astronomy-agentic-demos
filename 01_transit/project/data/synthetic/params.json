@@ -1,0 +1,12 @@
+{
+  "period": 2.2,
+  "t0": 0.5,
+  "depth": 0.01,
+  "rp_over_rstar": 0.1,
+  "dur_total": 0.12,
+  "dur_flat": 0.09,
+  "noise": 0.002,
+  "cadence": 0.0204,
+  "span": 27.0,
+  "seed": 42
+}
