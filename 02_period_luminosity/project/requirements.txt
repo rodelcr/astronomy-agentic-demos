@@ -1,0 +1,6 @@
+# requirements for the period demo (subset of repo-root environment.yml)
+numpy
+scipy
+matplotlib
+astropy
+pytest
