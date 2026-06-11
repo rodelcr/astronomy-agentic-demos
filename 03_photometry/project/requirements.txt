@@ -1,0 +1,6 @@
+# requirements for the photometry demo (subset of repo-root environment.yml)
+numpy
+matplotlib
+astropy
+photutils
+pytest
