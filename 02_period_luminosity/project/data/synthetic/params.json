@@ -1,0 +1,18 @@
+{
+  "period": 3.7,
+  "amplitude": 0.4,
+  "n_points": 300,
+  "noise": 0.02,
+  "span": 60.0,
+  "seed": 7,
+  "harmonics": [
+    1.0,
+    0.4,
+    0.15
+  ],
+  "phases": [
+    0.0,
+    0.6,
+    1.1
+  ]
+}
