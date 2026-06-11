@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+*.egg-info/
+
+# Env
+.venv/
+env/
+
+# OS
+.DS_Store
+
+# NOTE: we deliberately DO commit results/*.png and bundled data/ —
+# the figures are meant to be inspected on GitHub and the data keeps
+# every demo runnable offline.

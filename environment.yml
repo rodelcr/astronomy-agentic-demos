@@ -1,0 +1,29 @@
+# Conda environment that ships with the astronomy agentic-coding demos.
+#
+#   conda env create -f environment.yml      # creates an env named "demos"
+#   conda activate demos
+#   python -m ipykernel install --user --name demos --display-name "Python (demos)"
+#
+# Every demo in this repo is designed to run, and every test to pass, inside
+# this single environment with no network access (all data is bundled).
+name: demos
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - numpy
+  - scipy
+  - matplotlib
+  - astropy
+  - photutils
+  - astroquery
+  - pytest
+  - jupyter
+  - jupyterlab
+  - nbconvert
+  - ipykernel
+  - pip
+  - pip:
+      # batman-package ships C-compiled transit models (the external "answer
+      # key" for the transit demo); installed via pip because conda-forge lags.
+      - batman-package

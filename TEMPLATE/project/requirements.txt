@@ -1,0 +1,7 @@
+# requirements for this demo (subset of the repo-root environment.yml)
+numpy
+scipy
+matplotlib
+astropy
+# add the demo's answer-key library, e.g. batman-package / photutils / astroquery
+pytest
