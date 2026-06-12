@@ -21,6 +21,24 @@ control, tests, notes, and a skeptical eye on every plot.
 
 ---
 
+## 📲 Get the repo
+
+<img src="assets/repo_qr.png" alt="QR code to github.com/rodelcr/astronomy-agentic-demos" width="190" align="right">
+
+**Scan the QR** → or go to **[github.com/rodelcr/astronomy-agentic-demos](https://github.com/rodelcr/astronomy-agentic-demos)** — then:
+
+```bash
+git clone https://github.com/rodelcr/astronomy-agentic-demos
+cd astronomy-agentic-demos
+conda env create -f environment.yml   # creates the "demos" env
+conda activate demos
+pytest 0*/project -q                  # expect 16 passed
+```
+
+<br clear="right">
+
+---
+
 ## The five habits every demo teaches
 
 These are the things that separate "I asked the AI and pasted what it gave me"
