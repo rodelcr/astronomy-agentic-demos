@@ -28,3 +28,6 @@ dependencies:
       # batman-package ships C-compiled transit models (the external "answer
       # key" for the transit demo); installed via pip because conda-forge lags.
       - batman-package
+      # CAMB is the Boltzmann code that computes the CMB theory spectrum for the
+      # capstone demo (07_cmb_power_spectrum).
+      - camb
