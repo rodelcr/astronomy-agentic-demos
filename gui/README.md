@@ -1,6 +1,6 @@
 # Interactive dashboard
 
-A Streamlit app that turns the six demos into live, slider-driven visualizations. Every
+A Streamlit app that turns the seven demos into live, slider-driven visualizations. Every
 panel calls the **same tested functions** as the demos (`scripts/*.py` in each demo
 folder), so the picture on screen is the code `pytest` verifies — not separate,
 untrusted visualization math.
@@ -19,11 +19,11 @@ live model.
 ## What it looks like
 
 ![transit panel](screenshots/01_transit.png)
-![blackbody panel](screenshots/06_blackbody.png)
+![CMB spectrum panel](screenshots/07_cmb.png)
 ![CMD panel](screenshots/04_cmd.png)
 ![Hubble panel](screenshots/05_hubble.png)
 
-(`screenshots/02_period.png` and `screenshots/03_photometry.png` are the remaining two.)
+(`02_period.png`, `03_photometry.png`, and `06_blackbody.png` are the remaining panels.)
 
 ## The panels
 
@@ -35,6 +35,7 @@ live model.
 | 🌌 CMD (Pleiades) | parallax S/N cut | the main sequence tighten as field stars drop out; distance |
 | 📈 Hubble (H₀) | max distance | the slope H₀ and its bootstrap error update live |
 | 🌡️ Blackbody (CMB) | temperature | the Planck curve fit FIRAS only at 2.725 K; χ² minimized |
+| 🌀 CMB spectrum (Planck) | Hubble constant H₀ | the acoustic peaks shift over Planck; χ² minimized near H₀ = 67 |
 
 ## If something goes wrong on stage
 

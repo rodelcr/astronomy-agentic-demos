@@ -39,6 +39,10 @@ Panels and their key interaction:
      metric = H0 with bootstrap error (Planck 67.4, local ~73).
   6. Blackbody (CMB/FIRAS): slider for temperature → Planck curve over the FIRAS points
      (error bars ×400) + a live χ² metric, minimized at T = 2.725 K.
+  7. CMB spectrum (Planck, capstone): slider for H0 → CAMB ΛCDM theory over the Planck TT
+     acoustic peaks + a live χ² metric, minimized near H0 = 67 (cache the CAMB call by
+     parameters with st.cache_data so the slider stays responsive). Ties to panel 5: this
+     is the early-Universe H0 vs the local one — the Hubble tension.
 
 Then verify it WITHOUT a browser using streamlit.testing.v1.AppTest: load the app, select
 each sidebar option, and assert `at.exception is None` for every panel. Finally boot it

@@ -46,9 +46,15 @@ from real computational science:
 | `04_gaia_cmd` | Color–magnitude diagram of a cluster | catalog | `astroquery` + literature |
 | `05_hubble` | Velocity vs distance → H₀ | tabular fit | `scipy` + bootstrap |
 | `06_blackbody` | Fit a Planck curve → temperature | SED | `astropy.modeling.BlackBody` |
+| `07_cmb_power_spectrum` | Fit ΛCDM to Planck TT/TE → cosmology | power spectrum | `CAMB` |
 
 `01`–`03` are the **core three** (the three big data modalities every observer
-touches). `04`–`06` are **extensions** that reuse the same machinery.
+touches). `04`–`06` are **extensions** that reuse the same machinery. `07` is the
+**capstone** — a full cosmological fit with a Boltzmann code, and the slowest demo.
+
+> Two demos, one debate: demo `05` measures the **local** Hubble constant (H₀ = 74.8)
+> while demo `07` measures it from the **early-Universe** CMB (H₀ = 67). The ~5σ gap is
+> the **Hubble tension** — you measure both sides of it in this repo.
 
 `TEMPLATE/` is the empty skeleton each demo is copied from — start here to build
 a seventh.
