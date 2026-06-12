@@ -1,44 +1,52 @@
-# HANDOFF — CMB demo (capstone)
+# HANDOFF — CMB map → power spectrum demo (capstone)
 
-**TL;DR.** Fit a ΛCDM model (theory from CAMB) to the real Planck 2018 TT+TE power spectra
-and recovered cosmological parameters:
+**TL;DR.** Computed the CMB angular power spectrum from a sky **map** by spherical-harmonic
+decomposition (map → a_ℓm → Ĉ_ℓ = 1/(2ℓ+1)Σ_m|a_ℓm|² → bin), validated it against `healpy`
+and **NaMaster**, fit ΛCDM to the result, and ran the same pipeline on the real Planck map.
 
-> **H₀ = 67.0 km/s/Mpc, ωc = 0.121, Aₛ = 2.10** (Planck: 67.36 / 0.1200 / 2.100),
-> **χ²/dof = 1.09**. The CMB's early-Universe H₀ = 67 vs demo 05's local 74.8 is the
-> **Hubble tension**. Caveat: simplified Gaussian likelihood on binned spectra — not the
-> official Planck analysis (see NOTES).
+> Injected H₀ = 69.0 → **recovered 69.19** (ωc, Aₛ on the nose) from a spectrum decomposed off an
+> Nside-2048 map. `cl_from_alm` matches `healpy.alm2cl` to 7×10⁻¹⁵. First acoustic peak recovered
+> from the **real** Planck SMICA map. The CMB's early-Universe H₀ ≈ 69 vs demo 05's local 74.8 =
+> the Hubble tension.
+
+This demo replaced an earlier binned-spectra version after a user correction; the rebuild's
+intermediate problems (download truncation, API drift, pixel-window bias, binning artifact) are
+cataloged in `notes/NOTES_cmb.md` and narrated in `walkthrough/TRANSCRIPT.md`.
 
 ## What's here
 
 | File | What it is |
 |------|-----------|
-| `scripts/cmb.py` | `theory_spectrum` (CAMB), `chi2`, `fit_cosmology`, `load_planck` + CLI |
-| `scripts/make_figures.py` | fits real data; writes `results/tt_fit.png`, `te_fit.png`, `best_fit.json` |
-| `tests/test_cmb.py` | injected-cosmology recovery + D_ℓ normalization vs CAMB |
-| `data/real/planck_{tt,te}_binned.csv` | real Planck 2018 binned spectra (ESA PLA) |
-| `data/synthetic/` | mock TT+TE from known cosmology + `params.json` |
-| `notebook.ipynb` | peaks → units trap → fit → TT+TE → Hubble tension |
+| `scripts/powerspectrum.py` | the SHT pipeline: `map_to_alm`, `cl_from_alm`, `pseudo_cl`, `bin_spectrum`, `namaster_bandpowers` + CLI |
+| `scripts/cosmofit.py` | CAMB theory + `fit_cosmology` to map-derived bandpowers |
+| `scripts/fetch_real_map.py` | rebuild the committed Nside-256 SMICA files from the archive |
+| `scripts/make_figures.py` | regenerate the four figures + `best_fit.json` |
+| `tests/test_powerspectrum.py`, `tests/test_cosmofit.py` | the four tests |
+| `data/synthetic/` | `make_synthetic.py` + bandpowers + params.json |
+| `data/real/planck_smica_{I,mask}_nside256.fits` | downgraded real Planck SMICA |
+| `notebook.ipynb` | the full narrative |
 
 ## Reproduce
 
 ```bash
 conda activate demos
-python data/synthetic/make_synthetic.py
-pytest                 # ~20 s
+python data/synthetic/make_synthetic.py   # decompose an Nside-2048 map -> bandpowers
+pytest                                      # 4 tests, ~25 s
 python scripts/make_figures.py
-python scripts/cmb.py --tt data/real/planck_tt_binned.csv --te data/real/planck_te_binned.csv
+# optional: rebuild the real-map files (downloads ~2 GB)
+python scripts/fetch_real_map.py
 ```
 
 ## Validation status
 
-- ✅ Recovers injected synthetic cosmology (H₀, ωc, Aₛ).
-- ✅ D_ℓ normalization matches CAMB's hand-converted raw C_ℓ (1e-4).
-- ✅ Real best-fit matches Planck 2018; χ²/dof ≈ 1.1; same parameters fit TT *and* TE.
+- ✅ `cl_from_alm` matches `healpy.alm2cl` (7×10⁻¹⁵).
+- ✅ Decomposed spectrum recovers the input C_ℓ (binned, few %).
+- ✅ Masked pipeline agrees with NaMaster MASTER (~10%).
+- ✅ Map-derived bandpowers fit recovers the injected cosmology.
 
 ## Outstanding / extensions
 
-- Replace the point fit with a proper MCMC (emcee/cobaya) to get real posteriors and
-  degeneracy contours (e.g. the H₀–ωc banana).
-- Free up ωb and nₛ; add EE; add a τ prior.
-- Use the actual bandpower window functions instead of effective-ℓ interpolation.
-- Quantify the Hubble tension: compare this H₀ posterior to demo 05's bootstrap.
+- Hand-roll the spin-2 (E/B) transform for TE/EE instead of delegating to healpy.
+- Full MASTER + beam + half-mission noise debiasing on the real Nside-2048 map.
+- Replace the χ² point fit with MCMC for posteriors and the H₀–ωc degeneracy contour.
+- Quantify the Hubble tension against demo 05's bootstrap H₀.

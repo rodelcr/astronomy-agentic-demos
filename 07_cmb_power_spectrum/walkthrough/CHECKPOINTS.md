@@ -1,19 +1,26 @@
-# Checkpoint tags — CMB power spectrum
+# Checkpoint tags — CMB map → power spectrum
+
+> This demo was **rebuilt** from a binned-spectra version after a user correction (compute from
+> the Nside-2048 maps; show the spherical-harmonic decomposition). The tags below mark the
+> rebuilt, map-based pipeline. The pivot — and the intermediate problems it surfaced — is
+> documented in `TRANSCRIPT.md`. (`PROMPTS.md` lays out the build as six conceptual steps; the
+> reference repo groups them into the tags below.)
 
 ```bash
-git checkout 07-cmb-step-3      # right after theory + fit passed
-git diff   07-cmb-step-3 -- 07_cmb_power_spectrum/project/scripts/cmb.py
+git checkout 07-cmb-step-1      # the spherical-harmonic pipeline + its tests
+git diff   07-cmb-step-1 -- 07_cmb_power_spectrum/project/scripts/powerspectrum.py
 git checkout main
 ```
 
 | Tag | Captures |
 |-----|----------|
-| `07-cmb-step-1` | two failing tests (cosmology recovery + CAMB normalization) vs a stub |
-| `07-cmb-step-2` | mock TT+TE from a known cosmology + `params.json` |
-| `07-cmb-step-3` | `scripts/cmb.py` (CAMB theory + χ² + fit); **both tests green** + CLI |
-| `07-cmb-step-4` | `notebook.ipynb` (units trap → fit) |
-| `07-cmb-step-5` | `make_figures.py` + `results/` TT & TE fits + `best_fit.json` |
-| `07-cmb-step-6` | real Planck result + Hubble-tension framing |
-| `07-cmb-step-7` | `notes/` NOTES (with simplifications) + HANDOFF |
+| `07-cmb-step-1` | `powerspectrum.py` (the SHT pipeline) + tests: `cl_from_alm` vs healpy, recover input spectrum, NaMaster agreement |
+| `07-cmb-step-2` | `make_synthetic.py`: decompose an Nside-2048 map → committed bandpowers + params.json |
+| `07-cmb-step-3` | `cosmofit.py` + test: fit ΛCDM to the map-derived bandpowers, recover injected cosmology |
+| `07-cmb-step-4` | `make_figures.py` + `results/` (map+spectrum, masking/NaMaster, cosmology fit) + best_fit.json |
+| `07-cmb-step-5` | downgraded real Planck SMICA map + `fetch_real_map.py`; real-data peak |
+| `07-cmb-step-6` | `notebook.ipynb`, PLAN/README/notes/walkthrough (incl. the intermediate-problems catalog) |
 
-> The C_ℓ-vs-D_ℓ / μK units bug fixed inside step 3 is described in `TRANSCRIPT.md`.
+> The pixel-window bias (a real 2% error) and the binning artifact (a *fake* 5% bias) were both
+> fixed while building `powerspectrum.py` / `make_synthetic.py` — see `TRANSCRIPT.md` for why
+> they needed opposite responses.

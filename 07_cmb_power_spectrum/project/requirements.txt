@@ -4,4 +4,6 @@ scipy
 matplotlib
 astropy
 camb
+healpy
+namaster   # import name: pymaster
 pytest

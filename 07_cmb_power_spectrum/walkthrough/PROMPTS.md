@@ -1,88 +1,76 @@
-# Prompt walkthrough — CMB power spectrum (capstone)
+# Prompt walkthrough — CMB map → power spectrum (capstone)
 
-The agentic-coding side. Paste each step into Claude Code in your own empty folder, one at
-a time; read the diff and look at the output before continuing. This is the most ambitious
-demo — the model is a Boltzmann code (CAMB), so the emphasis is inference and **honesty
-about simplifications**. Compare against `../project/` and `CHECKPOINTS.md`.
+The agentic-coding side. Paste each step into Claude Code in your own empty folder, one at a
+time; read the diff and look at the output before continuing. This is the most ambitious demo:
+you compute a power spectrum from a sky **map** by spherical-harmonic decomposition, validate
+against `healpy` and **NaMaster**, then fit a cosmology. Expect intermediate problems — that's
+the point; see `TRANSCRIPT.md`.
 
-> Arc: **tests first → data → implement → explore → inspect → real data → notes.**
+> Arc: **the SHT estimator → make a sky → decompose it → masking/NaMaster → fit cosmology → real sky.**
 
 ### Step 0 — Orient
 ```
-Read 07_cmb_power_spectrum/PLAN.md and project/README.md. What are we measuring, what
-computes the theory, and what do we validate? List every simplification the README admits
-to. No code yet.
+Read 07_cmb_power_spectrum/PLAN.md and project/README.md. What are we computing, by what
+transform, and what two libraries validate it? Why do we NOT use Planck's pre-binned spectra? No code.
 ```
-**Look for:** "theory from CAMB; validate our D_ℓ normalization + recover injected cosmology;
-simplified Gaussian likelihood on binned spectra, reduced parameters." If it can't list the
-caveats, it doesn't understand the demo.
+**Look for:** "spectrum from a map via spherical-harmonic decomposition; validated by
+healpy.alm2cl and NaMaster; binned spectra hide the computation."
 
-### Step 1 — Tests first (red)
+### Step 1 — The estimator first (and validate it)
 ```
-Write tests/test_cmb.py + a stub scripts/cmb.py so they import and fail:
-  1. test_recovers_injected_cosmology — fit mock TT+TE of known (H0, ωc, As), recover them.
-  2. test_normalization_matches_camb — assert our theory D_ℓ equals CAMB's raw C_ℓ converted
-     by hand with ℓ(ℓ+1)/2π and the μK² factor.
-Run pytest, show red. Commit "step 1: failing tests".
+Write scripts/powerspectrum.py with cl_from_alm(alm): compute Ĉ_ℓ = 1/(2ℓ+1) Σ_m |a_ℓm|² BY HAND
+(HEALPix stores only m≥0, so it's |a_{ℓ0}|² + 2 Σ_{m≥1} |a_ℓm|²). Write a test asserting it
+matches healpy.alm2cl on a small map. Run pytest. Commit "step 1: cl_from_alm + healpy check".
 ```
-**Look for:** the normalization test is the student-owned check (we can't re-derive CAMB's
-physics, but we *can* check our unit handling).
+**Look for:** machine-precision agreement. The decomposition must be real, inspectable code.
 
-### Step 2 — Mock data from a known cosmology
+### Step 2 — Make a sky and decompose it
 ```
-Write data/synthetic/make_synthetic.py: compute TT+TE with CAMB at chosen parameters
-(offset from the Planck fiducial), sample at the real Planck bins' multipoles, add Gaussian
-noise scaled to the real error bars. Save mock_tt.csv, mock_te.csv, params.json. Run it.
-Commit "step 2: mock data + truth".
+Add generate_cmb_map (synfast from a CAMB C_ℓ — APPLY the pixel window so it behaves like a real
+map), map_to_alm, pixel_window, bin_spectrum. Write a test: synthesize a map from a known C_ℓ,
+decompose it back, and recover the input (bin the input the SAME way to compare!). Commit "step 2".
 ```
-**Look for:** the noise model reuses the *real* Planck error bars — realistic, not arbitrary.
+**Look for:** the two traps in TRANSCRIPT — apply pixwin at generation (or the spectrum tilts
+high), and compare binned-to-binned (or a steep spectrum fakes a 5% bias).
 
-### Step 3 — Implement theory + likelihood + fit (green)
+### Step 3 — Masking and NaMaster
 ```
-Implement scripts/cmb.py: theory_spectrum(H0, ωc, As, ...) wrapping CAMB and returning D_ℓ
-in μK² for TT and TE; bin_to_data (interpolate to data multipoles); chi2 (joint TT+TE);
-fit_cosmology via scipy minimize over {H0, ωc, As}. Make both tests pass; add a CLI.
-Commit "step 3: theory + fit pass".
+Add pseudo_cl (Ĉ_ℓ of map·mask, divided by f_sky) and namaster_bandpowers (NaMaster MASTER
+deconvolution). Write a test: on a Galactic-cut apodized mask, our fsky estimator agrees with
+NaMaster to ~10%. Commit "step 3: masking + NaMaster".
 ```
-**Look for:** the units (see TRANSCRIPT) — D_ℓ vs C_ℓ and μK vs K. `python scripts/cmb.py --help` works.
+**Look for:** NaMaster is the rigorous answer; the residual fsky-vs-MASTER difference is the
+mode-coupling. (API note: `NmtBin.from_nside_linear(nside, nlb)` — no `lmax` kwarg.)
 
-### Step 4 — Explore + weave (the units trap)
+### Step 4 — The data product: decompose an Nside-2048 map
 ```
-Create notebook.ipynb: load the real Planck TT, plot it, then DELIBERATELY plot raw C_ℓ to
-show it looks nothing like the data, then the correctly normalized D_ℓ. Then fit (importing
-fit_cosmology) and print parameters vs Planck. Commit "step 4: notebook".
+Write data/synthetic/make_synthetic.py: synthesize a polarized Nside-2048 map from a chosen
+cosmology, run the pipeline to get TT (hand-rolled) and TE (healpy spin-2) bandpowers, save them
++ params.json. The map is 400 MB — DON'T commit it; commit the bandpowers. Commit "step 4".
 ```
-**Look for:** the notebook *shows* the wrong-units curve before the right one — that contrast
-is the lesson.
+**Look for:** the committed data is the small spectrum measured off the map, not the map.
 
-### Step 5 — Inspect the fit (TT and TE)
+### Step 5 — Fit a cosmology to the map-derived spectrum
 ```
-Write scripts/make_figures.py: fit the real data, cache results/best_fit.json, and save
-results/tt_fit.png and results/te_fit.png (data + best-fit theory + residual panels). Look:
-does ONE set of parameters track BOTH spectra, and are the residuals consistent with the
-error bars? Commit "step 5: figures".
+Write scripts/cosmofit.py: CAMB theory + fit_cosmology over {H0, ωc, As} with cosmic-variance
+errors. Write a test: fit the bandpowers from step 4 and recover the injected cosmology. Commit
+"step 5: cosmology fit".
 ```
-**Look for:** the same best fit on TT *and* TE, residuals scattered around zero within ±1σ.
-A good TT fit that misses TE means a bug or a too-simple model.
+**Look for:** recovers the injected H₀ (~69). If it lands several km/s/Mpc off, suspect a
+pipeline bias (step 2's pixel window) — not the fit.
 
-### Step 6 — Real Planck + the Hubble tension
+### Step 6 — Figures, the real sky, and notes
 ```
-Report H0, ωc, As vs Planck 2018 and χ²/dof. Then compare this early-Universe H0 to demo
-05_hubble's local H0 = 74.8 and explain the Hubble tension. State the simplifications.
-Commit "step 6: real Planck result".
+Write scripts/make_figures.py (map+spectrum, masking/NaMaster, cosmology fit, real SMICA) and
+scripts/fetch_real_map.py (download SMICA, downgrade to Nside 256). Run the real map through the
+pipeline. Then write notes/ — including a catalog of the intermediate problems you hit and how
+you solved them. Commit "step 6: figures + real map + notes".
 ```
-**Look for:** ~67 / 0.120 / 2.10, χ²/dof ≈ 1.1, and an honest framing of the tension and the
-caveats — no overclaiming a Planck-grade measurement.
-
-### Step 7 — Notes
-```
-Write notes/NOTES_cmb.md (decisions, the FULL list of simplifications, the units gotcha, the
-ESA PLA data source) and notes/HANDOFF_cmb.md. Commit "step 7: notes".
-```
-**Look for:** the simplifications are written down, not buried. That honesty is the grade.
+**Look for:** the first acoustic peak from real Planck data, and an honest write-up of the messy
+steps (that catalog is the agentic-coding lesson).
 
 ---
-`git tag` lists `07-cmb-step-1 … -step-7`.
+`git tag` lists `07-cmb-step-1 … -step-6`. Diff vs the reference:
 ```
-git diff 07-cmb-step-3 -- 07_cmb_power_spectrum/project/scripts/cmb.py
+git diff 07-cmb-step-1 -- 07_cmb_power_spectrum/project/scripts/powerspectrum.py
 ```

@@ -1,78 +1,80 @@
-# CMB power spectrum — fitting cosmology to Planck (capstone)
+# CMB map → power spectrum → cosmology (capstone)
 
 ## The problem
 
-The cosmic microwave background is a snapshot of the Universe at 380,000 years old. Its
-faint temperature ripples, summarized as a **power spectrum** — variance as a function of
-angular scale (multipole ℓ) — carry a fingerprint of the cosmos: how much matter, how much
-dark matter, how fast it expands. We fit a **ΛCDM** model to the real **Planck 2018** TT
-(temperature) and TE (temperature–polarization) spectra and read off cosmological
-parameters.
+A CMB experiment hands you a **map** of the microwave sky. The cosmology lives in its
+**angular power spectrum** — and getting from the map to the spectrum is a real computation:
+the **spherical-harmonic decomposition**. This demo does it explicitly, on a synthetic
+Nside-2048 sky and on the real Planck map, then fits a cosmological model to the result.
 
-This is the **capstone**: the model isn't a closed form, it's a Boltzmann code (**CAMB**).
-The skill is *inference* — likelihood, fit, validation — and *intellectual honesty* about
-what's simplified.
+> This demo was **rebuilt after a correction**: the first version fit Planck's pre-binned
+> spectra and skipped the decomposition. The user asked for the real thing — from the Nside-2048
+> maps. The story is in `walkthrough/TRANSCRIPT.md`, which catalogs the intermediate problems
+> that rebuild surfaced (a flaky 2 GB download, an API quirk, two numerical biases) and how
+> agentic coding solved each.
 
 ## Physics scaffold
 
-Before recombination, photons and baryons oscillate as sound waves; those frozen
-oscillations appear as **acoustic peaks** in the power spectrum. The peak spacing measures
-the geometry/expansion (→ H₀), the peak *heights* measure the matter densities (ωb, ωc),
-and the overall amplitude/tilt measure the primordial fluctuations (Aₛ, nₛ).
+Any temperature field on the sphere expands in spherical harmonics:
 
-The plotted quantity is
+> **T(n̂) = Σ_ℓm a_ℓm Y_ℓm(n̂)**,  with  **a_ℓm = ∫ T(n̂) Y*_ℓm(n̂) dΩ**
 
-> **D_ℓ = ℓ(ℓ+1) C_ℓ / 2π   in μK²**
+`healpy.map2alm` evaluates that integral. The **angular power spectrum** is the variance of
+the coefficients at each scale ℓ:
 
-(not the raw C_ℓ — getting that factor or the μK scale wrong is the classic first CMB bug).
-We compute D_ℓ with CAMB for trial parameters, compare to Planck via a χ², and minimize.
+> **Ĉ_ℓ = 1/(2ℓ+1) Σ_{m=-ℓ}^{ℓ} |a_ℓm|²**
 
-> Headline result: **H₀ = 67.0 km/s/Mpc, ωc = 0.121, Aₛ = 2.10** (Planck 2018: 67.36 /
-> 0.1200 / 2.100), with **χ²/dof ≈ 1.1**. The CMB's *early-Universe* H₀ = 67 sits ~5σ below
-> the *local* H₀ = 74.8 from demo `05_hubble` — the **Hubble tension**.
+`cl_from_alm` computes that m-sum by hand (HEALPix stores only m ≥ 0, so for a real map it's
+|a_{ℓ0}|² + 2Σ_{m≥1}|a_ℓm|²) and is checked against `healpy.alm2cl`. Finite pixels smooth the
+map (the pixel window w_ℓ) — divide it out. Real skies are masked (the Galaxy is cut), which
+couples multipoles; the rigorous deconvolution is **NaMaster** (MASTER).
+
+> Headline result: from a spectrum we **decomposed out of an Nside-2048 map**, we recover the
+> injected cosmology (**H₀ ≈ 69**, ωc, Aₛ on the nose); the masked pipeline matches NaMaster; and
+> the first acoustic peak emerges from the **real** Planck SMICA map.
 
 ## What's in here
 
 ```
 project/
-  notebook.ipynb        peaks → units trap → CAMB theory → fit → TT+TE → Hubble tension
-  scripts/cmb.py        theory_spectrum (CAMB), chi2, fit_cosmology — importable + CLI
-  tests/test_cmb.py     recover injected cosmology + D_ℓ normalization matches CAMB
+  notebook.ipynb            sky → SHT → spectrum → masking/NaMaster → fit → real sky
+  scripts/powerspectrum.py  map_to_alm, cl_from_alm, pseudo_cl, bin_spectrum, namaster_bandpowers — + CLI
+  scripts/cosmofit.py       CAMB theory + fit_cosmology to map-derived bandpowers
+  scripts/fetch_real_map.py download the real SMICA map and make the committed Nside-256 files
+  tests/test_powerspectrum.py  cl_from_alm vs healpy + recover input spectrum + NaMaster agreement
+  tests/test_cosmofit.py    recover injected cosmology from the bandpowers
   data/
-    real/planck_{tt,te}_binned.csv   real Planck 2018 binned spectra (ESA PLA)
-    synthetic/                        make_synthetic.py + params.json (known cosmology)
-  results/              tt_fit.png, te_fit.png, best_fit.json
-  notes/                NOTES (simplifications + data source) + HANDOFF
+    real/planck_smica_{I,mask}_nside256.fits   downgraded REAL Planck SMICA (committed)
+    synthetic/              make_synthetic.py + bandpowers_{tt,te}.csv + params.json
+  results/                  map_and_spectrum.png, masking_namaster.png, cosmology_fit.png, real_smica.png
+  notes/                    NOTES (incl. intermediate-problems catalog) + HANDOFF
   requirements.txt
 ```
+
+The Nside-2048 map (~400 MB) is **not** committed — it is regenerated deterministically from a
+seed. The committed data product is the small **bandpowers** CSV (the spectrum measured off the
+map), the params, and the downgraded real map.
 
 ## Run it
 
 ```bash
 conda activate demos
-pytest                 # ~20 s — runs CAMB many times (the slowest demo, by design)
-python scripts/cmb.py --tt data/real/planck_tt_binned.csv --te data/real/planck_te_binned.csv
+pytest                              # ~25 s — runs CAMB, an Nside-1024 SHT, and NaMaster
+python data/synthetic/make_synthetic.py      # decompose an Nside-2048 map into bandpowers
+python scripts/powerspectrum.py --nside 2048 --lmax 2000
 python scripts/make_figures.py
 ```
 
-## External answer key
+## External answer keys
 
-The model itself is **CAMB** (the standard Boltzmann code). We additionally validate our
-**D_ℓ normalization** against CAMB's raw C_ℓ converted by hand — see
-`tests/test_cmb.py::test_normalization_matches_camb` — and recover an injected cosmology
-from mock data.
-
-## Honesty — what's simplified (read this)
-
-This is a teaching fit, **not** an official Planck analysis. We use a Gaussian likelihood
-on the *public binned* spectra with diagonal errors (not the full `plik` likelihood,
-covariance, or foreground/nuisance parameters); we sample theory at each bin's effective ℓ
-(no bandpower windows); and we fit {H₀, ωc, Aₛ} with {ωb, nₛ, τ} fixed at the Planck
-fiducial. A full 6-parameter analysis needs MCMC (cobaya/CosmoMC). Our values land close
-to Planck, but the error bars are illustrative. Details in `notes/NOTES_cmb.md`.
+`healpy.alm2cl` validates the hand-rolled `cl_from_alm`; **NaMaster** validates the masked
+pipeline (`tests/test_powerspectrum.py`). The cosmology fit is checked by recovering an injected
+cosmology from the map-derived bandpowers.
 
 ## Data provenance
 
-`data/real/planck_{tt,te}_binned.csv` are the **real** Planck 2018 binned CMB power spectra
-(`COM_PowerSpect_CMB-TT-binned_R3.01`, `-TE-binned_R3.02`), downloaded from the ESA Planck
-Legacy Archive. Columns: ℓ, D_ℓ (μK²), error, and Planck's own best-fit. Nothing fabricated.
+The synthetic sky is a Gaussian realization (synfast) of a CAMB spectrum — generated, not
+fabricated, regenerable from the seed in `params.json`. The real map
+(`data/real/planck_smica_*_nside256.fits`) is the **real** Planck SMICA CMB map (Fixsen/Planck
+2018), temperature + confidence mask, downgraded from Nside 2048 to 256; reproduce it with
+`scripts/fetch_real_map.py`. Nothing is fabricated.

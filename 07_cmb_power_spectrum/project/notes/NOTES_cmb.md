@@ -1,51 +1,48 @@
-# NOTES — CMB demo
+# NOTES — CMB map → power spectrum demo
 
 ## Decisions
 
-- **CAMB is the model, not a hand-rolled check.** Computing a CMB spectrum from scratch
-  needs a Boltzmann solver (thousands of lines, perturbation theory through recombination).
-  So unlike the other demos, the external library *is* the theory engine; the student's
-  contribution is the inference layer (likelihood + fit) and the normalization handling.
-- **Validate the normalization, not the physics.** We can't independently check CAMB's
-  physics, but we can check that *our* D_ℓ = ℓ(ℓ+1)C_ℓ/2π μK² conversion is right, against
-  CAMB's raw C_ℓ converted by hand. That's the testable, student-owned piece.
-- **Reduced 3-parameter fit.** {H₀, ωc, Aₛ} free; {ωb, nₛ, τ} fixed at Planck fiducial.
-  These three are well constrained and reasonably separable given fixed ωb/nₛ/τ, so the
-  Nelder-Mead fit is stable and recovers Planck values.
+- **Compute the spectrum from a map, not from pre-binned files.** The whole lesson is the
+  spherical-harmonic decomposition; the binned Planck spectra hide it. (This demo was rebuilt
+  from a binned-spectra version after the user corrected that — see TRANSCRIPT.)
+- **Hand-rolled `cl_from_alm`.** We implement Ĉ_ℓ = 1/(2ℓ+1)Σ_m|a_ℓm|² explicitly so the
+  estimator is visible, and validate it against `healpy.alm2cl` (machine precision).
+- **healpy for the SHT integral, NaMaster for masking.** Evaluating a_ℓm at Nside 2048 and the
+  spin-2 (polarization) transforms are healpy's job; the rigorous masked mode-coupling is
+  NaMaster's. We don't reimplement either — we *use them as answer keys*.
+- **Synthetic map regenerated from seed.** 50M pixels (~400 MB) is too big to commit; the
+  committed data product is the bandpowers CSV. The real map is shipped only downgraded (Nside
+  256, ~3 MB).
 
-## The simplifications (be explicit — this is a teaching fit, not a Planck analysis)
+## Intermediate problems this rebuild surfaced (the agentic-coding lesson)
 
-1. **Likelihood:** Gaussian with *diagonal* errors on the *binned* public spectra. The real
-   Planck likelihood (`plik`) uses the full bandpower covariance and ~20 foreground/
-   nuisance/calibration parameters marginalized out. Consequence: our central values are
-   close to Planck, but our error bars are illustrative, not official.
-2. **Bandpower windows:** we sample theory at each bin's effective ℓ by interpolation. The
-   correct treatment convolves theory with each bin's window function.
-3. **Fixed parameters:** holding ωb, nₛ, τ fixed removes real degeneracies (e.g. As–τ). A
-   full 6-parameter posterior needs MCMC (cobaya/CosmoMC), not a point optimizer.
-4. **CAMB accuracy / lmax** are set for speed; production uses higher accuracy settings.
+A catalog of the messy steps between "fit the CMB" and the answer — each solved en route. The
+narrative version is in `walkthrough/TRANSCRIPT.md`.
 
-None of these are hidden: they're stated in the README and the notebook, because a fit you
-can't reproduce *and bound the assumptions of* is not a measurement.
+| # | Problem | Resolution |
+|---|---------|-----------|
+| 0 | First build used pre-binned spectra (skipped the computation) | full rebuild around map → aₗₘ → Cₗ; binned CSVs deleted |
+| 1 | Is the by-hand m-sum correct? | validated `cl_from_alm` vs `healpy.alm2cl` → 7×10⁻¹⁵ |
+| 2 | 2 GB SMICA download kept truncating (598 MB / 1.2 GB / …) | `curl -C - --max-time` resume loop in the background; built the offline core meanwhile |
+| 3 | `NmtBin.from_nside_linear(..., lmax=)` → TypeError | read the traceback; dropped the kwarg (pymaster 2.7 API) |
+| 4 | Recovery looked 5% biased | a **comparison** artifact (bin-average vs bin-centre); bin the input the same way |
+| 5 | A real +2.2% bias; fit gave H₀ = 65.4 not 69 | map lacked the **pixel window**; apply it at generation so pixwin² correction is exact → H₀ = 69.19 |
 
-## Dead end / gotcha (the wrong turn)
-
-The first theory overlay plotted CAMB's raw C_ℓ against the Planck D_ℓ data — and it fell
-off a cliff, orders of magnitude below the peaks, looking nothing like the data. The instinct
-to "rescale to match" is wrong: the issue is that the data are **D_ℓ = ℓ(ℓ+1)C_ℓ/2π in μK²**,
-while raw CAMB output (with `CMB_unit=None, raw_cl=True`) is the *dimensionless* C_ℓ. The fix
-is the ℓ(ℓ+1)/2π factor and the (2.7255×10⁶ μK)² scale. `test_normalization_matches_camb`
-encodes exactly this and would catch it.
+The distinction between #4 (don't touch the code) and #5 (fix the physics) is the crux: both
+showed up as "the spectrum is biased," and only a diagnostic — the ratio of map-derived to
+input, *mean and scatter vs the predicted cosmic-variance error* — told them apart.
 
 ## Data source (reproducible)
 
-ESA Planck Legacy Archive, via
-`https://pla.esac.esa.int/pla/aio/product-action?COSMOLOGY.FILE_ID=<file>`:
-`COM_PowerSpect_CMB-TT-binned_R3.01.txt` and `COM_PowerSpect_CMB-TE-binned_R3.02.txt`.
-Columns: ℓ_eff, D_ℓ (μK²), ±δD_ℓ, Planck best-fit. Reference: Planck 2018 results VI.
+Real map: Planck SMICA `COM_CMB_IQU-smica_2048_R3.00_full.fits` from the ESA Planck Legacy
+Archive (`scripts/fetch_real_map.py`), temperature (I_STOKES, K→μK) + confidence mask (TMASK),
+`ud_grade`'d to Nside 256.
 
 ## Numbers
 
-- Synthetic injected (H₀, ωc, Aₛ) = (69.0, 0.118, 2.05) → recovered within tolerance.
-- Real Planck TT+TE: H₀ = 67.0, ωc = 0.1207, Aₛ = 2.104; χ² = 159.6 / 146 dof (χ²/dof = 1.09).
-- Planck 2018: H₀ = 67.36, ωc = 0.1200, Aₛ = 2.10. **Contrast demo 05 local H₀ = 74.8.**
+- `cl_from_alm` vs `healpy.alm2cl`: 7×10⁻¹⁵ (machine precision).
+- Synthetic recovery (Nside 1024): binned map-derived ≈ input to a few percent.
+- NaMaster vs naive fsky on a masked sky: agree to ~10% (residual = mode-coupling).
+- Map-derived bandpowers fit: H₀ = 69.19 (injected 69.0), ωc = 0.1169 (0.118), Aₛ = 2.049 (2.05),
+  χ²/dof ≈ 1.8 (single realization, cosmic-variance errors).
+- Real SMICA (Nside 256): first acoustic peak recovered, tracking Planck ΛCDM to ℓ ≈ 500.
