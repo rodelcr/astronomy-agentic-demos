@@ -16,6 +16,15 @@ A browser tab opens at `http://localhost:8501`. Pick a demo from the sidebar and
 slider. Everything runs **offline** on the bundled real data — no network, no API, no
 live model.
 
+## What it looks like
+
+![transit panel](screenshots/01_transit.png)
+![blackbody panel](screenshots/06_blackbody.png)
+![CMD panel](screenshots/04_cmd.png)
+![Hubble panel](screenshots/05_hubble.png)
+
+(`screenshots/02_period.png` and `screenshots/03_photometry.png` are the remaining two.)
+
 ## The panels
 
 | Panel | Drag this | Watch |

@@ -59,18 +59,44 @@ transit by detuning its period). It reuses the demos' tested functions and runs
 offline. `conda activate demos && streamlit run gui/app.py`. See `gui/README.md`,
 and `gui/PROMPT.md` for the ready-to-paste prompt that builds it with an agent.
 
+| | |
+|---|---|
+| ![transit panel](gui/screenshots/01_transit.png) | ![blackbody panel](gui/screenshots/06_blackbody.png) |
+
 ---
 
-## Setup
+## Setup — the `demos` conda environment
 
-Everything runs in one conda environment that ships with the repo. All data is
-bundled, so demos run **offline** and tests are deterministic.
+Everything in this repo (every script, test, notebook, and the GUI) runs in **one
+conda environment named `demos`**, defined by `environment.yml` at the repo root. All
+data is bundled, so demos run **offline** and tests are deterministic.
 
 ```bash
+# 1. create the environment (named "demos") from the shipped spec
 conda env create -f environment.yml
+
+# 2. activate it — do this in every new terminal before running anything
 conda activate demos
+
+# 3. register it as a Jupyter kernel so notebooks find it (named "Python (demos)")
 python -m ipykernel install --user --name demos --display-name "Python (demos)"
 ```
+
+**What's in it** (Python 3.12, from `conda-forge` + pip): `numpy`, `scipy`,
+`matplotlib`, `astropy`, `photutils`, `astroquery` (data + answer-key libraries);
+`batman-package` (transit model, via pip); `pytest`; `jupyter`/`jupyterlab`/`nbconvert`/
+`ipykernel`; `streamlit` (the dashboard). The notebooks are pinned to the `demos`
+kernel, so they open ready-to-run in JupyterLab.
+
+**Verify the environment is good** (expect 12 passed):
+
+```bash
+conda activate demos
+pytest 0*/project -q
+```
+
+To update or remove it later: `conda env update -f environment.yml --prune` /
+`conda env remove -n demos`.
 
 Then, for any demo:
 
