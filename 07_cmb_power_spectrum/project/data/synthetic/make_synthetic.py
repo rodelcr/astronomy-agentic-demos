@@ -1,11 +1,19 @@
-"""Generate mock CMB TT+TE spectra from a KNOWN cosmology.
+"""Generate the demo's data: a power spectrum DECOMPOSED FROM A MAP.
 
-We pick cosmological parameters, compute the theory spectra with CAMB, sample them at
-the same multipoles as the real Planck bins, and add Gaussian noise scaled to the real
-Planck error bars. The injected parameters go in params.json, so the test can check we
-recover them. Seeded → reproducible.
+We do NOT ship Planck's pre-binned spectra. Instead we build an observation from
+scratch the way you actually would:
 
-    python make_synthetic.py     # writes mock_tt.csv, mock_te.csv, params.json here
+  1. pick a cosmology and get its theory C_ℓ from CAMB,
+  2. synthesize a full-sky Gaussian CMB **map** at Nside 2048 (synfast),
+  3. spherically-harmonic-decompose that map back into a power spectrum (our own
+     map → a_ℓm → Ĉ_ℓ pipeline), correcting the pixel window, and bin it.
+
+The Nside-2048 map is 50 million pixels (~400 MB) — too big to commit — so it is
+regenerated deterministically from the seed here. The committed data product is the
+small **bandpowers** CSV (the spectrum we measured off the map), plus params.json with
+the input cosmology so the fit test can check recovery.
+
+    python make_synthetic.py     # writes bandpowers_tt.csv, bandpowers_te.csv, params.json
 """
 from __future__ import annotations
 
@@ -18,27 +26,57 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 PROJECT = HERE.parents[1]
 sys.path.insert(0, str(PROJECT))
-from scripts.cmb import theory_spectrum, bin_to_data, load_planck
+from scripts.powerspectrum import (generate_cmb_map, map_to_alm, cl_from_alm,
+                                   pixel_window, bin_spectrum)
+from scripts.cosmofit import theory_cl_tt, cosmic_variance
 
-TRUTH = dict(H0=69.0, omch2=0.118, As=2.05, seed=17)   # deliberately off Planck fiducial
+TRUTH = dict(H0=69.0, omch2=0.118, As=2.05, nside=2048, lmax=2000, nlb=40, seed=17)
 
 
 def main():
-    # reuse the real bins' multipoles + error bars as the mock's noise model
-    real = load_planck(PROJECT / "data" / "real" / "planck_tt_binned.csv",
-                       PROJECT / "data" / "real" / "planck_te_binned.csv")
-    rng = np.random.default_rng(TRUTH["seed"])
-    ell, D_tt, D_te = theory_spectrum(TRUTH["H0"], TRUTH["omch2"], TRUTH["As"])
+    import healpy as hp
+    import camb
+    t = TRUTH
+    pars = camb.set_params(H0=t["H0"], ombh2=0.02237, omch2=t["omch2"], ns=0.9649,
+                           As=t["As"] * 1e-9, tau=0.0544, lmax=t["lmax"] + 300)
+    spec = camb.get_results(pars).get_cmb_power_spectra(
+        pars, CMB_unit="muK", raw_cl=True, spectra=["total"])["total"]
+    # CAMB total columns: TT, EE, BB, TE
+    cl_in = np.zeros((4, t["lmax"] + 1))
+    for i in range(4):
+        cl_in[i] = spec[:t["lmax"] + 1, i]
+    cl_in[:, :2] = 0.0
 
-    for key, model, fname in (("tt", D_tt, "mock_tt.csv"), ("te", D_te, "mock_te.csv")):
-        l, _, dD = real[key]
-        clean = bin_to_data(ell, model, l)
-        noisy = clean + rng.normal(0.0, dD)
-        out = np.column_stack([l, noisy, dD])
-        np.savetxt(HERE / fname, out, delimiter=",",
-                   header="ell,Dl_muK2,dDl_muK2", comments="")
-    (HERE / "params.json").write_text(json.dumps(TRUTH, indent=2))
-    print(f"wrote mock TT+TE at H0={TRUTH['H0']}, omch2={TRUTH['omch2']}, As={TRUTH['As']}")
+    # --- synthesize a polarized Nside 2048 map and decompose it ---
+    np.random.seed(t["seed"])
+    maps = hp.synfast([cl_in[0], cl_in[1], cl_in[2], cl_in[3]], t["nside"],
+                      lmax=t["lmax"], pol=True, new=True, pixwin=True)   # [T, Q, U]
+    ell = np.arange(t["lmax"] + 1)
+    pw_T, pw_P = hp.pixwin(t["nside"], lmax=t["lmax"], pol=True)
+
+    # TT: OUR hand-rolled pipeline (map → a_ℓm → Ĉ_ℓ)
+    alm_T = map_to_alm(maps[0], t["lmax"])
+    cl_tt = cl_from_alm(alm_T, t["lmax"]) / pw_T ** 2
+    l_tt, cb_tt = bin_spectrum(ell, cl_tt, lmin=30, lmax=t["lmax"], nlb=t["nlb"])
+
+    # TE: the polarization cross-spectrum (spin-2 transform, via healpy)
+    cls = hp.anafast(maps, lmax=t["lmax"], pol=True)             # TT,EE,BB,TE,EB,TB
+    with np.errstate(invalid="ignore", divide="ignore"):
+        cl_te = cls[3] / (pw_T * pw_P)
+    cl_te[:2] = 0.0
+    l_te, cb_te = bin_spectrum(ell, cl_te, lmin=30, lmax=t["lmax"], nlb=t["nlb"])
+
+    # cosmic-variance error bars (one sky, full-sky here)
+    e_tt = cosmic_variance(l_tt, cb_tt, fsky=1.0, nlb=t["nlb"])
+    e_te = np.abs(cosmic_variance(l_te, np.abs(cb_te) + cb_tt[:len(cb_te)] * 0, 1.0, t["nlb"]))
+
+    np.savetxt(HERE / "bandpowers_tt.csv", np.column_stack([l_tt, cb_tt, e_tt]),
+               delimiter=",", header="ell,Cl_tt_muK2,dCl", comments="")
+    np.savetxt(HERE / "bandpowers_te.csv", np.column_stack([l_te, cb_te, e_te]),
+               delimiter=",", header="ell,Cl_te_muK2,dCl", comments="")
+    (HERE / "params.json").write_text(json.dumps(t, indent=2))
+    print(f"decomposed a Nside={t['nside']} map ({maps[0].size} pixels) into "
+          f"{len(l_tt)} TT + {len(l_te)} TE bandpowers; injected H0={t['H0']}")
 
 
 if __name__ == "__main__":
