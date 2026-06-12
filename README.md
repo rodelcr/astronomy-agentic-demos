@@ -53,6 +53,12 @@ touches). `04`–`06` are **extensions** that reuse the same machinery.
 `TEMPLATE/` is the empty skeleton each demo is copied from — start here to build
 a seventh.
 
+`gui/` is an **interactive Streamlit dashboard** that turns all six demos into
+slider-driven visualizations (drag the CMB temperature and watch χ² climb; smear a
+transit by detuning its period). It reuses the demos' tested functions and runs
+offline. `conda activate demos && streamlit run gui/app.py`. See `gui/README.md`,
+and `gui/PROMPT.md` for the ready-to-paste prompt that builds it with an agent.
+
 ---
 
 ## Setup

@@ -22,6 +22,7 @@ dependencies:
   - jupyterlab
   - nbconvert
   - ipykernel
+  - streamlit          # interactive dashboard (gui/app.py)
   - pip
   - pip:
       # batman-package ships C-compiled transit models (the external "answer
