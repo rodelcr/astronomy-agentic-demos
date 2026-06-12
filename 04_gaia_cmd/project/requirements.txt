@@ -1,0 +1,6 @@
+# requirements for the Gaia CMD demo (subset of repo-root environment.yml)
+numpy
+matplotlib
+astropy
+astroquery
+pytest
