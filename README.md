@@ -32,7 +32,7 @@ git clone https://github.com/rodelcr/astronomy-agentic-demos
 cd astronomy-agentic-demos
 conda env create -f environment.yml   # creates the "demos" env
 conda activate demos
-pytest 0*/project -q                  # expect 16 passed
+pytest 0*/project -q                  # expect 22 passed
 ```
 
 <br clear="right">
@@ -65,11 +65,14 @@ from real computational science:
 | `05_hubble` | Velocity vs distance → H₀ | tabular fit | `scipy` + bootstrap |
 | `06_blackbody` | Fit a Planck curve → temperature | SED | `astropy.modeling.BlackBody` |
 | `07_cmb_power_spectrum` | CMB map → power spectrum → ΛCDM cosmology | HEALPix sky map | `healpy` + `NaMaster` + `CAMB` |
+| `08_solar_system` | Planet positions → live orrery + Kepler III | ephemeris / time series | `skyfield` + JPL `Horizons` |
 
 `01`–`03` are the **core three** (the three big data modalities every observer
 touches). `04`–`06` are **extensions** that reuse the same machinery. `07` is the
 **capstone** — a full pipeline from a sky **map** to cosmology via spherical-harmonic
-decomposition, and the slowest demo.
+decomposition, and the slowest demo. `08` adds the one modality the others lack — a
+**time-domain, interactive visualization**: a live orrery from JPL's ephemeris, validated
+against the NASA Horizons service and against Kepler's third law.
 
 > Two demos, one debate: demo `05` measures the **local** Hubble constant (H₀ = 74.8)
 > while demo `07` measures it from the **early-Universe** CMB (H₀ ≈ 67–69). The gap is
@@ -83,10 +86,10 @@ decomposition, and the slowest demo.
 `TEMPLATE/` is the empty skeleton each demo is copied from — start here to build
 an eighth.
 
-`gui/` is an **interactive Streamlit dashboard** that turns all seven demos into
+`gui/` is an **interactive Streamlit dashboard** that turns all eight demos into
 slider-driven visualizations (drag the CMB temperature and watch χ² climb; smear a
-transit by detuning its period). It reuses the demos' tested functions and runs
-offline. `conda activate demos && streamlit run gui/app.py`. See `gui/README.md`,
+transit by detuning its period; scrub the orrery through time). It reuses the demos' tested
+functions and runs offline. `conda activate demos && streamlit run gui/app.py`. See `gui/README.md`,
 and `gui/PROMPT.md` for the ready-to-paste prompt that builds it with an agent.
 
 | | |
@@ -119,7 +122,7 @@ python -m ipykernel install --user --name demos --display-name "Python (demos)"
 `jupyter`/`jupyterlab`/`nbconvert`/`ipykernel`; `streamlit` (the dashboard). The
 notebooks are pinned to the `demos` kernel, so they open ready-to-run in JupyterLab.
 
-**Verify the environment is good** (expect 16 passed):
+**Verify the environment is good** (expect 22 passed):
 
 ```bash
 conda activate demos

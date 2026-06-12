@@ -1,0 +1,8 @@
+# requirements for the solar-system orrery demo (subset of repo-root environment.yml)
+numpy
+matplotlib
+astropy
+astroquery
+skyfield
+streamlit
+pytest

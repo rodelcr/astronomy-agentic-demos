@@ -24,9 +24,10 @@ PROJECT = Path(__file__).resolve().parents[1]
 KERNEL = PROJECT / "data" / "kernels" / "de440s.bsp"
 
 # IAU76 mean obliquity of the ecliptic at J2000.0 = 84381.448 arcsec. Rotating the ICRF
-# (equatorial) vector about the x-axis by this angle gives the J2000 ecliptic frame that
-# JPL Horizons reports (refplane='ecliptic'). Skyfield's built-in ecliptic_frame uses a
-# slightly different equinox and disagrees by ~14 arcsec — see notes/TRANSCRIPT.
+# (equatorial) vector about the x-axis by this FIXED angle gives the J2000 ecliptic frame
+# that JPL Horizons reports (refplane='ecliptic'), matching it to ~1e-10 AU. NB: Skyfield's
+# framelib.ecliptic_frame is the ecliptic & equinox *of date* — it precesses away from J2000
+# (~0.06 AU off by 2026); framelib.ecliptic_J2000_frame is the equivalent built-in. See NOTES.
 EPS_J2000 = np.radians(84381.448 / 3600.0)
 
 # ordered for display (Sun-outward)
