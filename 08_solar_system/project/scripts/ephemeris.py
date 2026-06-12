@@ -83,14 +83,35 @@ def planet_position(body, t):
     return heliocentric_ecliptic(body, t)
 
 
+def _sample(body, days, n):
+    """Sample (jd_tdb, xyz) for `body` over `days`, starting 1850 so even Neptune fits."""
+    ts, _ = _load()
+    jd0 = ts.utc(1850, 1, 1).tdb                       # TDB JD, safely inside de440s (1849–2150)
+    jd = jd0 + np.linspace(0.0, days, n)
+    xyz = heliocentric_ecliptic(body, ts.tdb_jd(jd))   # (3, n)
+    return jd, xyz
+
+
 def orbital_period(body):
-    """Sidereal orbital period of `body` in days, recovered from the ephemeris."""
-    raise NotImplementedError
+    """Sidereal orbital period of `body` in days, recovered from the ephemeris.
+
+    Watch the heliocentric ecliptic longitude (which increases monotonically — all planets
+    orbit prograde) over a window a bit longer than one orbit, and interpolate the instant it
+    has advanced by exactly 2π. The search horizon in BODIES only *sizes* the window.
+    """
+    days = BODIES[body][1]
+    jd, xyz = _sample(body, days, n=min(20000, max(3000, int(days))))
+    lon = np.unwrap(np.arctan2(xyz[1], xyz[0]))        # monotonic increasing
+    t_cross = np.interp(lon[0] + 2 * np.pi, lon, jd)    # first 2π advance
+    return float(t_cross - jd[0])
 
 
 def semi_major_axis(body):
-    """Semi-major axis of `body` in AU, recovered as (r_min + r_max)/2 over one orbit."""
-    raise NotImplementedError
+    """Semi-major axis of `body` in AU, as (r_min + r_max)/2 over exactly one recovered orbit."""
+    P = orbital_period(body)
+    _, xyz = _sample(body, P, n=4000)
+    r = np.sqrt((xyz ** 2).sum(axis=0))                # perihelion and aphelion bracket one orbit
+    return float((r.min() + r.max()) / 2)
 
 
 def _main() -> None:
