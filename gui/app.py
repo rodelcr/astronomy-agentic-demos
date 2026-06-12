@@ -1,6 +1,6 @@
 """Astronomy demos — interactive dashboard.
 
-A Streamlit app that turns the six demos into live, slider-driven visualizations:
+A Streamlit app that turns the eight demos into live, slider-driven visualizations:
 drag a parameter and watch the fit respond. It reuses the SAME functions the demos
 test (`scripts/*.py` in each demo), so what you see here is exactly what the tests
 verify — no separate, untrusted visualization code.
@@ -48,6 +48,7 @@ def estimators():
         hubble=_load("05_hubble", "hubble"),
         blackbody=_load("06_blackbody", "blackbody"),
         cmb=_load("07_cmb_power_spectrum", "cosmofit"),
+        orrery=_load("08_solar_system", "orrery"),
     )
 
 
@@ -208,6 +209,31 @@ def panel_cmb(E):
     st.metric("χ² to map-derived TT", f"{chi2:,.0f}", help="minimized near the injected H₀ ≈ 69")
 
 
+def panel_orrery(E):
+    import datetime as dt
+    import time
+    st.subheader("Live orrery — JPL ephemeris (de440s)")
+    st.caption("Scrub the date; the planets move on the J2000 ecliptic. Every position is the "
+               "same tested `ephemeris.py` validated against JPL Horizons. For the full play "
+               "loop, run `streamlit run 08_solar_system/project/scripts/orrery.py`.")
+    O = E["orrery"]
+    view = st.radio("view", list(O.VIEWS), horizontal=True)
+    if "orrery_date" not in st.session_state:
+        st.session_state.orrery_date = dt.date(2026, 6, 12)
+    cur = st.slider("date", O.MIN_DATE, O.MAX_DATE, st.session_state.orrery_date,
+                    step=dt.timedelta(days=1), format="YYYY-MM-DD")
+    st.session_state.orrery_date = cur
+    animate = st.checkbox("▶ animate")
+    st.pyplot(O.draw_orrery(cur, view))
+    earth = next(r for r in O.positions_table(cur) if r[0] == "earth")
+    st.metric("Earth heliocentric distance", f"{earth[1]:.3f} AU", help="~1 AU by definition")
+    if animate:
+        nxt = cur + dt.timedelta(days=25)
+        st.session_state.orrery_date = O.MIN_DATE if nxt > O.MAX_DATE else nxt
+        time.sleep(0.12)
+        st.rerun()
+
+
 PANELS = {
     "🪐 Transit (Kepler-8 b)": panel_transit,
     "✨ Cepheid period (V1154 Cyg)": panel_period,
@@ -216,13 +242,14 @@ PANELS = {
     "📈 Hubble's law (H₀)": panel_hubble,
     "🌡️ Blackbody (CMB)": panel_blackbody,
     "🌀 CMB spectrum (Planck)": panel_cmb,
+    "🌞 Live orrery (de440s)": panel_orrery,
 }
 
 
 def main():
     st.set_page_config(page_title="Astronomy demos", layout="centered")
     st.title("Astronomy demos — interactive")
-    st.write("Seven classic measurements, live. Every panel calls the **same tested "
+    st.write("Eight classic measurements, live. Every panel calls the **same tested "
              "functions** as the demos. Pick one from the sidebar and drag a slider.")
     choice = st.sidebar.radio("demo", list(PANELS))
     st.sidebar.markdown("---")
