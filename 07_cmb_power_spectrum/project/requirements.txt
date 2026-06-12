@@ -1,0 +1,7 @@
+# requirements for the CMB demo (subset of repo-root environment.yml)
+numpy
+scipy
+matplotlib
+astropy
+camb
+pytest
