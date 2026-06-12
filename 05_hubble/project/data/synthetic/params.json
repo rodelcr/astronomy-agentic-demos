@@ -1,0 +1,8 @@
+{
+  "H0": 70.0,
+  "n_galaxies": 200,
+  "dist_min": 10.0,
+  "dist_max": 200.0,
+  "peculiar_velocity": 300.0,
+  "seed": 5
+}
