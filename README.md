@@ -57,9 +57,9 @@ touches). `04`–`06` are **extensions** that reuse the same machinery. `07` is 
 > the **Hubble tension** — you measure both sides of it in this repo.
 
 `TEMPLATE/` is the empty skeleton each demo is copied from — start here to build
-a seventh.
+an eighth.
 
-`gui/` is an **interactive Streamlit dashboard** that turns all six demos into
+`gui/` is an **interactive Streamlit dashboard** that turns all seven demos into
 slider-driven visualizations (drag the CMB temperature and watch χ² climb; smear a
 transit by detuning its period). It reuses the demos' tested functions and runs
 offline. `conda activate demos && streamlit run gui/app.py`. See `gui/README.md`,
@@ -90,11 +90,11 @@ python -m ipykernel install --user --name demos --display-name "Python (demos)"
 
 **What's in it** (Python 3.12, from `conda-forge` + pip): `numpy`, `scipy`,
 `matplotlib`, `astropy`, `photutils`, `astroquery` (data + answer-key libraries);
-`batman-package` (transit model, via pip); `pytest`; `jupyter`/`jupyterlab`/`nbconvert`/
-`ipykernel`; `streamlit` (the dashboard). The notebooks are pinned to the `demos`
-kernel, so they open ready-to-run in JupyterLab.
+`batman-package` (transit model) and `camb` (CMB Boltzmann code), via pip; `pytest`;
+`jupyter`/`jupyterlab`/`nbconvert`/`ipykernel`; `streamlit` (the dashboard). The
+notebooks are pinned to the `demos` kernel, so they open ready-to-run in JupyterLab.
 
-**Verify the environment is good** (expect 12 passed):
+**Verify the environment is good** (expect 14 passed):
 
 ```bash
 conda activate demos
