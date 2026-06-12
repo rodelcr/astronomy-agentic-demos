@@ -47,7 +47,7 @@ def estimators():
         cluster=_load("04_gaia_cmd", "cluster"),
         hubble=_load("05_hubble", "hubble"),
         blackbody=_load("06_blackbody", "blackbody"),
-        cmb=_load("07_cmb_power_spectrum", "cmb"),
+        cmb=_load("07_cmb_power_spectrum", "cosmofit"),
     )
 
 
@@ -55,7 +55,7 @@ def estimators():
 def _cmb_theory(H0, omch2, As):
     """Cache CAMB TT theory by parameters so the slider stays responsive."""
     import importlib.util
-    path = REPO / "07_cmb_power_spectrum" / "project" / "scripts" / "cmb.py"
+    path = REPO / "07_cmb_power_spectrum" / "project" / "scripts" / "cosmofit.py"
     spec = importlib.util.spec_from_file_location("cmb_theory", path)
     mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
     ell, D_tt, _ = mod.theory_spectrum(H0, omch2, As, lmax=2500)
@@ -185,23 +185,27 @@ def panel_blackbody(E):
 
 
 def panel_cmb(E):
-    st.subheader("CMB power spectrum — Planck (capstone)")
-    st.caption("Drag the Hubble constant; the acoustic peaks shift and χ² is minimized near "
-               "H₀ = 67 — the early-Universe value (vs the local 74.8 in the Hubble panel).")
+    st.subheader("CMB power spectrum — map-derived (capstone)")
+    st.caption("The TT bandpowers here were decomposed from a synthetic Nside-2048 sky map "
+               "(map → aₗₘ → Cₗ). Drag H₀; the acoustic peaks shift and χ² is minimized near "
+               "the injected H₀ ≈ 69 (vs the local 74.8 in the Hubble panel).")
     import json
     bf = json.loads((REPO / "07_cmb_power_spectrum/project/results/best_fit.json").read_text())
-    arr = load_csv("07_cmb_power_spectrum", "planck_tt_binned.csv")
-    l, D, dD = arr[:, 0], arr[:, 1], arr[:, 2]
+    arr = np.loadtxt(REPO / "07_cmb_power_spectrum/project/data/synthetic/bandpowers_tt.csv",
+                     delimiter=",", skiprows=1)
+    l, Cl, dCl = arr[:, 0], arr[:, 1], arr[:, 2]
+    D = l * (l + 1) * Cl / (2 * np.pi)          # map-derived bandpowers as D_ℓ
+    dD = l * (l + 1) * dCl / (2 * np.pi)
     H0 = st.slider("H₀ (km/s/Mpc)", 60.0, 75.0, round(bf["H0"], 1), 0.5)
     ell, D_tt = _cmb_theory(H0, round(bf["omch2"], 4), round(bf["As"], 3))
     chi2 = float(np.sum(((D - np.interp(l, ell, D_tt)) / dD) ** 2))
     fig, ax = plt.subplots(figsize=(7.5, 4.5))
     ax.plot(ell, D_tt, "-", color="crimson", lw=1.5, label=f"ΛCDM (CAMB), H₀={H0}")
-    ax.errorbar(l, D, yerr=dD, fmt="o", ms=3, color="0.2", label="Planck 2018")
-    ax.set_xlim(0, 2500); ax.set_xlabel("multipole ℓ"); ax.set_ylabel(r"$\mathcal{D}_\ell^{TT}\ (\mu K^2)$")
+    ax.errorbar(l, D, yerr=dD, fmt="o", ms=3, color="0.2", label="decomposed from the map")
+    ax.set_xlim(0, 2000); ax.set_xlabel("multipole ℓ"); ax.set_ylabel(r"$\mathcal{D}_\ell^{TT}\ (\mu K^2)$")
     ax.legend(fontsize=8)
     st.pyplot(fig)
-    st.metric("χ² to Planck TT", f"{chi2:,.0f}", help="minimized near the true H₀ ≈ 67")
+    st.metric("χ² to map-derived TT", f"{chi2:,.0f}", help="minimized near the injected H₀ ≈ 69")
 
 
 PANELS = {

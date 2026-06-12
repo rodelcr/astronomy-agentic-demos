@@ -46,15 +46,21 @@ from real computational science:
 | `04_gaia_cmd` | Color–magnitude diagram of a cluster | catalog | `astroquery` + literature |
 | `05_hubble` | Velocity vs distance → H₀ | tabular fit | `scipy` + bootstrap |
 | `06_blackbody` | Fit a Planck curve → temperature | SED | `astropy.modeling.BlackBody` |
-| `07_cmb_power_spectrum` | Fit ΛCDM to Planck TT/TE → cosmology | power spectrum | `CAMB` |
+| `07_cmb_power_spectrum` | CMB map → power spectrum → ΛCDM cosmology | HEALPix sky map | `healpy` + `NaMaster` + `CAMB` |
 
 `01`–`03` are the **core three** (the three big data modalities every observer
 touches). `04`–`06` are **extensions** that reuse the same machinery. `07` is the
-**capstone** — a full cosmological fit with a Boltzmann code, and the slowest demo.
+**capstone** — a full pipeline from a sky **map** to cosmology via spherical-harmonic
+decomposition, and the slowest demo.
 
 > Two demos, one debate: demo `05` measures the **local** Hubble constant (H₀ = 74.8)
-> while demo `07` measures it from the **early-Universe** CMB (H₀ = 67). The ~5σ gap is
+> while demo `07` measures it from the **early-Universe** CMB (H₀ ≈ 67–69). The gap is
 > the **Hubble tension** — you measure both sides of it in this repo.
+
+> Demo `07` is also the best example of **agentic coding on messy intermediate steps**:
+> its `walkthrough/TRANSCRIPT.md` catalogs the real problems the build hit — a rejected
+> data shortcut, a flaky 2 GB download, an API quirk, and two subtle numerical biases —
+> and how each was solved. That back-and-forth *is* the lesson.
 
 `TEMPLATE/` is the empty skeleton each demo is copied from — start here to build
 an eighth.
@@ -90,11 +96,12 @@ python -m ipykernel install --user --name demos --display-name "Python (demos)"
 
 **What's in it** (Python 3.12, from `conda-forge` + pip): `numpy`, `scipy`,
 `matplotlib`, `astropy`, `photutils`, `astroquery` (data + answer-key libraries);
-`batman-package` (transit model) and `camb` (CMB Boltzmann code), via pip; `pytest`;
+`healpy` + `namaster` (HEALPix maps & masked power spectra, CMB demo); `batman-package`
+(transit model) and `camb` (CMB Boltzmann code), via pip; `pytest`;
 `jupyter`/`jupyterlab`/`nbconvert`/`ipykernel`; `streamlit` (the dashboard). The
 notebooks are pinned to the `demos` kernel, so they open ready-to-run in JupyterLab.
 
-**Verify the environment is good** (expect 14 passed):
+**Verify the environment is good** (expect 16 passed):
 
 ```bash
 conda activate demos

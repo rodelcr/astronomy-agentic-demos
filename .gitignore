@@ -12,6 +12,11 @@ env/
 # OS
 .DS_Store
 
+# Large transient data (regenerated from seed / fetch scripts — never committed)
+# The Nside-2048 CMB maps are ~400 MB; only the small bandpowers CSV is committed.
+07_cmb_power_spectrum/project/data/real/_smica_full.fits
+*.fits.tmp
+
 # NOTE: we deliberately DO commit results/*.png and bundled data/ —
 # the figures are meant to be inspected on GitHub and the data keeps
 # every demo runnable offline.

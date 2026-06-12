@@ -23,6 +23,8 @@ dependencies:
   - nbconvert
   - ipykernel
   - streamlit          # interactive dashboard (gui/app.py)
+  - healpy             # HEALPix maps + spherical-harmonic transforms (CMB demo)
+  - namaster           # masked power spectra / MASTER (CMB demo); import name: pymaster
   - pip
   - pip:
       # batman-package ships C-compiled transit models (the external "answer
