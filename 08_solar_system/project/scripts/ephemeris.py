@@ -114,6 +114,13 @@ def semi_major_axis(body):
     return float((r.min() + r.max()) / 2)
 
 
+def orbit_track(body, n=400):
+    """(x, y, z) sampled along one full orbit of `body`, AU, J2000 ecliptic — for orbit traces."""
+    P = orbital_period(body)
+    _, xyz = _sample(body, P, n=n)
+    return xyz
+
+
 def _main() -> None:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
